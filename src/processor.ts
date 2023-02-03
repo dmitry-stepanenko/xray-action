@@ -91,11 +91,11 @@ export class Processor {
       /* does a import for a specific file */
       // eslint-disable-next-line no-inner-declarations
       async function doImport(file: string): Promise<string> {
-        core.debug(`Try to import: ${file}`)
+        core.debug(`Try to import (from dmitry-stepanenko/xray-action): ${file}`)
+        let mimeType: string
         try {
           // identify mimetype
           const tmpMime = lookup(file)
-          let mimeType: string
           if (tmpMime === false) {
             mimeType = 'application/xml'
           } else {
@@ -113,6 +113,28 @@ export class Processor {
           return result
         } catch (error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
           core.warning(`🔥 Failed to import: ${file} (${error.message})`)
+          try {
+            const content = (await fs.promises.readFile(file)).toString();
+            core.debug('Failed file content' + content);
+          } catch (error) {
+            core.debug('Could not get file content');
+          }
+          
+          try {
+            // execute import
+            core.debug(`Second attempt to import: ${file}`)
+            const result = await xray.import(
+              await fs.promises.readFile(file),
+              mimeType!
+            )
+            core.info(`ℹ️ Imported from second attempt: ${file} (${result})`)
+
+            completed++
+            return result
+          } catch (error) {
+            core.debug(`Second attempt failed`)
+          }
+
           failed++
 
           if (!importOptions.continueOnImportError) {

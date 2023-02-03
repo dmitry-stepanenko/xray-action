@@ -219,11 +219,11 @@ class Processor {
                 // eslint-disable-next-line no-inner-declarations
                 function doImport(file) {
                     return __awaiter(this, void 0, void 0, function* () {
-                        core.debug(`Try to import: ${file}`);
+                        core.debug(`Try to import (from dmitry-stepanenko/xray-action): ${file}`);
+                        let mimeType;
                         try {
                             // identify mimetype
                             const tmpMime = (0, mime_types_1.lookup)(file);
-                            let mimeType;
                             if (tmpMime === false) {
                                 mimeType = 'application/xml';
                             }
@@ -238,6 +238,24 @@ class Processor {
                         }
                         catch (error /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
                             core.warning(`🔥 Failed to import: ${file} (${error.message})`);
+                            try {
+                                const content = (yield fs.promises.readFile(file)).toString();
+                                core.debug('Failed file content' + content);
+                            }
+                            catch (error) {
+                                core.debug('Could not get file content');
+                            }
+                            try {
+                                // execute import
+                                core.debug(`Second attempt to import: ${file}`);
+                                const result = yield xray.import(yield fs.promises.readFile(file), mimeType);
+                                core.info(`ℹ️ Imported from second attempt: ${file} (${result})`);
+                                completed++;
+                                return result;
+                            }
+                            catch (error) {
+                                core.debug(`Second attempt failed`);
+                            }
                             failed++;
                             if (!importOptions.continueOnImportError) {
                                 throw error;
